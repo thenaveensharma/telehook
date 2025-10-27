@@ -1,16 +1,14 @@
 services:
   - type: web
     name: telehook
-    runtime: go
-    buildCommand: go build -o telehook cmd/server/main.go
-    startCommand: ./telehook
+    env: go
+    buildCommand: cd /opt/render/project/src && go build -o telehook ./cmd/server/main.go
+    startCommand: cd /opt/render/project/src && ./telehook
     envVars:
       - key: PORT
         value: 8080
       - key: SERVER_HOST
         value: 0.0.0.0
-      - key: GO_VERSION
-        value: 1.24
     # You need to add these in Render dashboard:
     # - TELEGRAM_BOT_TOKEN (from @BotFather)
     # - TELEGRAM_CHANNEL_ID (@yourchannel or numeric ID)

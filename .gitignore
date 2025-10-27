@@ -41,16 +41,8 @@ Thumbs.db
 logs/
 
 # Documentation (keep only README.md)
-PROJECT_STATE.md
-QUICKSTART.md
-FRONTEND.md
-SETUP_GUIDE.md
-ALERT_SYSTEM.md
-PROJECT_SUMMARY.md
-RESUME_HERE.md
-MULTI_CHANNEL_GUIDE.md
-CHANGELOG_MULTI_CHANNEL.md
-FRONTEND_UPDATE.md
+*.md
+!README.md
 
 # Test files
 alert.txt
