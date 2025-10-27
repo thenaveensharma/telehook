@@ -29,6 +29,11 @@ func main() {
 	}
 	defer db.Close()
 
+	// Run database migrations automatically
+	if err := db.RunMigrations(); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
 	// Initialize Telegram bot
 	bot, err := telegram.NewBot()
 	if err != nil {
