@@ -1,25 +1,25 @@
 services:
   - type: web
     name: telehook
-    runtime: go
+    runtime: docker
     repo: https://github.com/thenaveensharma/telehook
     branch: main
-    buildCommand: go build -o telehook ./cmd/server/main.go
-    startCommand: ./telehook
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: PORT
         value: 8080
       - key: SERVER_HOST
         value: 0.0.0.0
-    # You need to add these in Render dashboard:
+    # Add these environment variables in Render dashboard:
     # - TELEGRAM_BOT_TOKEN (from @BotFather)
     # - TELEGRAM_CHANNEL_ID (@yourchannel or numeric ID)
-    # - DB_HOST (PostgreSQL host)
+    # - DB_HOST (from Render PostgreSQL)
     # - DB_PORT (5432)
-    # - DB_USER (postgres user)
-    # - DB_PASSWORD (postgres password)
+    # - DB_USER (from Render PostgreSQL)
+    # - DB_PASSWORD (from Render PostgreSQL)
     # - DB_NAME (telehook)
-    # - JWT_SECRET (random secret string)
+    # - DB_SSLMODE (require)
+    # - JWT_SECRET (random 32+ char string)
 
 databases:
   - name: telehook-db
