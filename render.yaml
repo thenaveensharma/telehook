@@ -1,9 +1,11 @@
 services:
   - type: web
     name: telehook
-    env: go
-    buildCommand: cd /opt/render/project/src && go build -o telehook ./cmd/server/main.go
-    startCommand: cd /opt/render/project/src && ./telehook
+    runtime: go
+    repo: https://github.com/thenaveensharma/telehook
+    branch: main
+    buildCommand: go build -o telehook ./cmd/server/main.go
+    startCommand: ./telehook
     envVars:
       - key: PORT
         value: 8080
