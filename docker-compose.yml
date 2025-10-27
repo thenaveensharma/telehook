@@ -24,10 +24,10 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "8080:8080"
+      - "10000:10000"
     environment:
       # Server
-      PORT: 8080
+      PORT: 10000
       SERVER_HOST: 0.0.0.0
 
       # Database

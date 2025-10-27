@@ -36,8 +36,8 @@ COPY --from=builder /app/migrations ./migrations
 # Copy web assets
 COPY --from=builder /app/web ./web
 
-# Expose port
-EXPOSE 8080
+# Expose port (Render uses PORT env var, defaults to 10000)
+EXPOSE 10000
 
 # Run the application
 CMD ["./server"]
