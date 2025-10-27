@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: telehook-db
+    environment:
+      POSTGRES_DB: telehook
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  bot:
+    build: .
+    container_name: telehook
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Server
+      PORT: 8080
+      SERVER_HOST: 0.0.0.0
+
+      # Database
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: telehook
+      DB_SSLMODE: disable
+
+      # JWT
+      JWT_SECRET: your-super-secret-jwt-key-change-this-in-production
+      JWT_EXPIRY_HOURS: 24
+
+      # Telegram - REPLACE WITH YOUR VALUES
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-123456789:ABCdefGHIjklMNOpqrsTUVwxyz}
+      TELEGRAM_CHANNEL_ID: ${TELEGRAM_CHANNEL_ID:-@yourchannel}
+
+      # Rate Limiting (high limit to allow burst traffic, real protection is Telegram rate limiting)
+      RATE_LIMIT: 10000
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

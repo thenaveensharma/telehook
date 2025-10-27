@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - TeleHook</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><a href="/">📱 TeleHook</a></h1>
+            <div class="header-actions">
+                <span id="usernameDisplay" class="username"></span>
+                <button id="logoutBtn" class="btn btn-small">Logout</button>
+            </div>
+        </header>
+
+        <main class="dashboard">
+            <h2>Your Webhook Dashboard</h2>
+
+            <!-- Tab Navigation -->
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="webhook">Webhook</button>
+                <button class="tab-btn" data-tab="bots">Telegram Bots</button>
+                <button class="tab-btn" data-tab="channels">Channels</button>
+                <button class="tab-btn" data-tab="activity">Activity</button>
+                <button class="tab-btn" data-tab="analytics">Analytics</button>
+            </div>
+
+            <!-- Webhook Tab -->
+            <div id="webhook-tab" class="tab-content active">
+            <div class="webhook-section">
+                <div class="card">
+                    <h3>🔗 Your Webhook URL</h3>
+                    <div class="webhook-url-container">
+                        <input type="text" id="webhookUrl" readonly class="webhook-url">
+                        <button id="copyBtn" class="btn btn-secondary">Copy</button>
+                    </div>
+                    <p class="webhook-info">Use this URL to send messages to your Telegram channel</p>
+                </div>
+
+                <div class="card">
+                    <h3>📋 Webhook Token</h3>
+                    <div class="webhook-token-container">
+                        <code id="webhookToken" class="webhook-token"></code>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🧪 Test Your Webhook</h3>
+                <form id="testWebhookForm" class="test-form">
+                    <div class="form-group">
+                        <label for="testChannelIdentifier">Channel Identifier *</label>
+                        <select id="testChannelIdentifier" required>
+                            <option value="">-- Select a channel --</option>
+                        </select>
+                        <small>Select which channel to send this test message to</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="testMessage">Message *</label>
+                        <textarea id="testMessage" rows="3" placeholder="Test message from dashboard" required></textarea>
+                        <small>Your message content (identifier will be added automatically)</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="testPriority">Priority</label>
+                        <select id="testPriority">
+                            <option value="1">1 - Urgent</option>
+                            <option value="2">2 - High</option>
+                            <option value="3" selected>3 - Normal</option>
+                            <option value="4">4 - Low</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="testData">Additional Data (JSON)</label>
+                        <textarea id="testData" rows="4" placeholder='{"key": "value"}'>{
+  "source": "dashboard",
+  "timestamp": "2025-10-25T12:00:00Z"
+}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>📝 Preview (will be sent to webhook)</label>
+                        <pre id="testMessagePreview" class="message-preview"></pre>
+                    </div>
+                    <div id="testErrorMessage" class="error-message" style="display: none;"></div>
+                    <div id="testSuccessMessage" class="success-message" style="display: none;"></div>
+                    <button type="submit" class="btn btn-primary">Send Test Message</button>
+                    <button type="button" id="refreshChannelsBtn" class="btn btn-secondary">Refresh Channels</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>💡 Usage Example</h3>
+                <div class="code-example">
+                    <p><strong>Multi-Channel Format:</strong> Messages must include channel identifier after <code>----</code></p>
+                    <pre><code>curl -X POST <span id="exampleUrl"></span> \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Hello from my app!\n----\ntg",
+    "priority": 3,
+    "data": {
+      "user_id": 123,
+      "action": "signup"
+    }
+  }'</code></pre>
+                    <p><strong>Message Format:</strong></p>
+                    <pre><code>&lt;your message content&gt;
+----
+&lt;channel_identifier&gt;</code></pre>
+                    <p><small>💡 Tip: Configure your channels in the "Channels" tab to set up identifiers like "tg", "alerts", "vip", etc.</small></p>
+                </div>
+            </div>
+            </div>
+
+            <!-- Telegram Bots Tab -->
+            <div id="bots-tab" class="tab-content">
+                <div class="card">
+                    <h3>🤖 Your Telegram Bots</h3>
+                    <button id="addBotBtn" class="btn btn-primary">+ Add New Bot</button>
+
+                    <div id="botsContainer" class="bots-list">
+                        <div id="loadingBots" class="loading">Loading bots...</div>
+                        <div id="botsList"></div>
+                        <div id="noBots" style="display: none;" class="no-data">
+                            <p>No bots configured yet. Add your first Telegram bot!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Bot Modal -->
+                <div id="addBotModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <span class="close">&times;</span>
+                        <h3>Add Telegram Bot</h3>
+                        <form id="addBotForm">
+                            <div class="form-group">
+                                <label for="botToken">Bot Token *</label>
+                                <input type="text" id="botToken" placeholder="123456:ABCdefGHI..." required>
+                                <small>Get from @BotFather on Telegram</small>
+                            </div>
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" id="botIsDefault">
+                                    Set as default bot
+                                </label>
+                            </div>
+                            <div id="addBotError" class="error-message" style="display: none;"></div>
+                            <button type="submit" class="btn btn-primary">Add Bot</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Channels Tab -->
+            <div id="channels-tab" class="tab-content">
+                <div class="card">
+                    <h3>📢 Your Channels</h3>
+                    <button id="addChannelBtn" class="btn btn-primary">+ Add New Channel</button>
+
+                    <div id="channelsContainer" class="channels-list">
+                        <div id="loadingChannels" class="loading">Loading channels...</div>
+                        <div id="channelsList"></div>
+                        <div id="noChannels" style="display: none;" class="no-data">
+                            <p>No channels configured yet. Add your first channel!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Channel Modal -->
+                <div id="addChannelModal" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <span class="close">&times;</span>
+                        <h3>Add Channel</h3>
+                        <form id="addChannelForm">
+                            <div class="form-group">
+                                <label for="channelBot">Select Bot *</label>
+                                <select id="channelBot" required>
+                                    <option value="">-- Select a bot --</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="channelIdentifier">Identifier *</label>
+                                <input type="text" id="channelIdentifier" placeholder="tg" required>
+                                <small>Short name to use in messages (e.g., "tg", "alerts", "vip")</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="channelId">Channel ID *</label>
+                                <input type="text" id="channelId" placeholder="@mychannel or -1001234567890" required>
+                                <small>Public: @channelname, Private: -1001234567890</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="channelName">Channel Name</label>
+                                <input type="text" id="channelName" placeholder="My Channel">
+                                <small>Friendly name for display</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="channelDescription">Description</label>
+                                <textarea id="channelDescription" rows="2" placeholder="Channel description"></textarea>
+                            </div>
+                            <div id="addChannelError" class="error-message" style="display: none;"></div>
+                            <button type="submit" class="btn btn-primary">Add Channel</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Activity Tab -->
+            <div id="activity-tab" class="tab-content">
+                <div class="card">
+                    <h3>📊 Recent Webhook Activity</h3>
+                    <div id="activityStats" class="activity-stats" style="display: none;">
+                        <div class="stat-box success">
+                            <div class="stat-number" id="successCount">0</div>
+                            <div class="stat-label">✅ Success</div>
+                        </div>
+                        <div class="stat-box failed">
+                            <div class="stat-number" id="failedCount">0</div>
+                            <div class="stat-label">❌ Failed</div>
+                        </div>
+                        <div class="stat-box filtered">
+                            <div class="stat-number" id="filteredCount">0</div>
+                            <div class="stat-label">🚫 Filtered</div>
+                        </div>
+                    </div>
+                    <div id="loadingLogs" class="loading">Loading activity...</div>
+                    <div id="logsContainer" style="display: none;">
+                        <div id="logsList" class="logs-list"></div>
+                    </div>
+                    <div id="noLogs" style="display: none;" class="no-data">
+                        <p>No webhook activity yet. Send a test message to get started!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Analytics Tab -->
+            <div id="analytics-tab" class="tab-content">
+                <div class="card">
+                    <div class="analytics-header">
+                        <h3>📊 Performance Analytics</h3>
+                        <div class="time-range-selector">
+                            <button class="range-btn active" data-range="24h">24 Hours</button>
+                            <button class="range-btn" data-range="7d">7 Days</button>
+                            <button class="range-btn" data-range="30d">30 Days</button>
+                        </div>
+                    </div>
+
+                    <div id="loadingAnalytics" class="loading">Loading analytics...</div>
+
+                    <div id="analyticsContent" style="display: none;">
+                        <!-- Summary Cards -->
+                        <div class="analytics-summary">
+                            <div class="metric-card">
+                                <div class="metric-icon">📨</div>
+                                <div class="metric-info">
+                                    <div class="metric-label">Total Messages</div>
+                                    <div class="metric-value" id="totalMessages">0</div>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-icon">✅</div>
+                                <div class="metric-info">
+                                    <div class="metric-label">Success Rate</div>
+                                    <div class="metric-value" id="successRate">0%</div>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-icon">⚡</div>
+                                <div class="metric-info">
+                                    <div class="metric-label">Avg Per Hour</div>
+                                    <div class="metric-value" id="avgPerHour">0</div>
+                                </div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-icon">🔥</div>
+                                <div class="metric-info">
+                                    <div class="metric-label">Peak Hour</div>
+                                    <div class="metric-value" id="peakHour">-</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Timeline Chart -->
+                        <div class="chart-container">
+                            <h4>Message Timeline</h4>
+                            <canvas id="timelineChart"></canvas>
+                        </div>
+
+                        <!-- Distribution Charts Row -->
+                        <div class="charts-row">
+                            <!-- Status Distribution -->
+                            <div class="chart-container half">
+                                <h4>Status Distribution</h4>
+                                <canvas id="statusChart"></canvas>
+                            </div>
+
+                            <!-- Priority Distribution -->
+                            <div class="chart-container half">
+                                <h4>Priority Distribution</h4>
+                                <canvas id="priorityChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Channel Distribution -->
+                        <div class="chart-container">
+                            <h4>Top Channels</h4>
+                            <canvas id="channelChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div id="noAnalyticsData" style="display: none;" class="no-data">
+                        <p>No analytics data available yet. Send some messages to see analytics!</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>&copy; 2025 TeleHook</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="/static/js/dashboard.js?v=2"></script>
+    <script src="/static/js/dashboard_tabs.js?v=2"></script>
+    <script src="/static/js/analytics.js?v=2"></script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+# Binaries
+bin/
+main
+server
+telehook
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# Go workspace file
+go.work
+
+# Environment files
+.env
+
+# Database files
+*.db
+*.sqlite
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Documentation (keep only README.md)
+PROJECT_STATE.md
+QUICKSTART.md
+FRONTEND.md
+SETUP_GUIDE.md
+ALERT_SYSTEM.md
+PROJECT_SUMMARY.md
+RESUME_HERE.md
+MULTI_CHANNEL_GUIDE.md
+CHANGELOG_MULTI_CHANNEL.md
+FRONTEND_UPDATE.md
+
+# Test files
+alert.txt
+test_api.sh
+stress_test.sh
+stress_test.py
