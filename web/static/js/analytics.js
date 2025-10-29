@@ -116,6 +116,9 @@ function createTimelineChart(timeline) {
         }
     });
 
+    // Set canvas height
+    ctx.canvas.style.height = '300px';
+
     timelineChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -186,6 +189,9 @@ function createStatusChart(statusDist) {
         statusChart.destroy();
     }
 
+    // Set canvas height
+    ctx.canvas.style.height = '250px';
+
     const statusColors = {
         'success': 'rgb(34, 197, 94)',
         'failed': 'rgb(239, 68, 68)',
@@ -233,6 +239,9 @@ function createPriorityChart(priorityDist) {
     if (priorityChart) {
         priorityChart.destroy();
     }
+
+    // Set canvas height
+    ctx.canvas.style.height = '250px';
 
     const priorityColors = {
         1: 'rgb(239, 68, 68)',   // Urgent - Red
@@ -288,6 +297,9 @@ function createChannelChart(channelDist) {
     if (channelChart) {
         channelChart.destroy();
     }
+
+    // Set canvas height
+    ctx.canvas.style.height = '300px';
 
     // Limit to top 10 channels
     const topChannels = channelDist.slice(0, 10);

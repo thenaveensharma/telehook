@@ -68,25 +68,42 @@ func (h *WebhookHandler) HandleWebhook(c *fiber.Ctx) error {
 		})
 	}
 
-	// Parse message to extract channel identifier
+	// Parse message to extract optional channel identifier
 	channelIdentifier, messageContent := parseMessageWithIdentifier(payload.Message)
+	log.Printf("[Webhook] User: %d, Original msg len: %d, Cleaned msg len: %d, Identifier: '%s'",
+		user.ID, len(payload.Message), len(messageContent), channelIdentifier)
 
-	// If no identifier found, return error (new behavior)
-	if channelIdentifier == "" {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "channel identifier not found. Message format: '<content>\\n----\\n<identifier>'",
-		})
+	// Log preview of cleaned message
+	previewLen := 100
+	if len(messageContent) < previewLen {
+		previewLen = len(messageContent)
 	}
+	log.Printf("[Webhook] Cleaned message preview: %s", messageContent[:previewLen])
 
-	// Look up channel configuration
-	channel, err := h.db.GetTelegramChannelByIdentifier(context.Background(), user.ID, channelIdentifier)
-	if err != nil {
-		log.Printf("Channel identifier '%s' not found for user %d: %v", channelIdentifier, user.ID, err)
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error":      "channel identifier not found or inactive",
-			"identifier": channelIdentifier,
-			"hint":       "Please configure this channel identifier in your dashboard",
-		})
+	var channel *models.TelegramChannel
+
+	// If identifier provided, use specific channel; otherwise use default
+	if channelIdentifier != "" {
+		// Look up channel by identifier
+		channel, err = h.db.GetTelegramChannelByIdentifier(context.Background(), user.ID, channelIdentifier)
+		if err != nil {
+			log.Printf("Channel identifier '%s' not found for user %d: %v", channelIdentifier, user.ID, err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error":      "channel identifier not found or inactive",
+				"identifier": channelIdentifier,
+				"hint":       "Please configure this channel identifier in your dashboard",
+			})
+		}
+	} else {
+		// Use default channel (first active channel)
+		channel, err = h.db.GetDefaultTelegramChannel(context.Background(), user.ID)
+		if err != nil {
+			log.Printf("No active channel found for user %d: %v", user.ID, err)
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "no active channel configured",
+				"hint":  "Please configure a Telegram channel in your dashboard",
+			})
+		}
 	}
 
 	// Get bot token for this channel
@@ -106,9 +123,11 @@ func (h *WebhookHandler) HandleWebhook(c *fiber.Ctx) error {
 
 	// Create payload map for alert
 	payloadMap := map[string]interface{}{
-		"message":    messageContent,
-		"priority":   priority,
-		"identifier": channelIdentifier,
+		"message":  messageContent,
+		"priority": priority,
+	}
+	if channelIdentifier != "" {
+		payloadMap["identifier"] = channelIdentifier
 	}
 	if payload.Data != nil {
 		payloadMap["data"] = payload.Data
@@ -116,16 +135,15 @@ func (h *WebhookHandler) HandleWebhook(c *fiber.Ctx) error {
 
 	// Create alert with channel routing information
 	alert := &queue.Alert{
-		ID:         uuid.New().String(),
-		UserID:     user.ID,
-		Username:   user.Username,
-		Payload:    payloadMap,
-		Priority:   priority,
-		MaxRetries: 3,
-		CreatedAt:  time.Now(),
-		// Store routing info in metadata
-		BotToken:  bot.BotToken,
-		ChannelID: channel.ChannelID,
+		ID:          uuid.New().String(),
+		UserID:      user.ID,
+		Username:    user.Username,
+		Payload:     payloadMap,
+		Priority:    priority,
+		MaxRetries:  3,
+		CreatedAt:   time.Now(),
+		BotToken:    bot.BotToken,
+		ChannelID:   channel.ChannelID,
 		DBChannelID: channel.ID,
 	}
 
@@ -137,13 +155,17 @@ func (h *WebhookHandler) HandleWebhook(c *fiber.Ctx) error {
 		})
 	}
 
-	return c.JSON(fiber.Map{
-		"success":    true,
-		"message":    "alert queued successfully",
-		"alert_id":   alert.ID,
-		"channel":    channel.ChannelName,
-		"identifier": channelIdentifier,
-	})
+	response := fiber.Map{
+		"success":  true,
+		"message":  "alert queued successfully",
+		"alert_id": alert.ID,
+		"channel":  channel.ChannelName,
+	}
+	if channelIdentifier != "" {
+		response["identifier"] = channelIdentifier
+	}
+
+	return c.JSON(response)
 }
 
 func (h *WebhookHandler) GetQueueStats(c *fiber.Ctx) error {
@@ -173,30 +195,39 @@ func (h *WebhookHandler) GetWebhookInfo(c *fiber.Ctx) error {
 	webhookURL := c.BaseURL() + "/api/webhook/" + user.WebhookToken.String()
 
 	return c.JSON(fiber.Map{
-		"username":     username,
-		"webhook_url":  webhookURL,
+		"username":      username,
+		"webhook_url":   webhookURL,
 		"webhook_token": user.WebhookToken,
-		"recent_logs":  logs,
+		"recent_logs":   logs,
 	})
 }
 
 // parseMessageWithIdentifier parses a message in the format:
 // "content\n----\nidentifier"
 // Returns the identifier and the content (without the separator and identifier)
+// If no identifier found, returns empty string and the original message
 func parseMessageWithIdentifier(message string) (identifier string, content string) {
-	// Split by "----"
-	parts := strings.Split(message, "----")
+	// Look for the pattern "\n----\n" to avoid matching dashes in content
+	separator := "\n----\n"
+	idx := strings.LastIndex(message, separator)
 
-	if len(parts) < 2 {
-		// No separator found, return empty identifier
+	if idx == -1 {
+		// No separator found, return empty identifier and original message
 		return "", message
 	}
 
-	// Content is everything before "----"
-	content = strings.TrimSpace(parts[0])
+	// Content is everything before the separator
+	content = strings.TrimSpace(message[:idx])
 
-	// Identifier is everything after "----" (trimmed)
-	identifier = strings.TrimSpace(parts[1])
+	// Identifier is everything after the separator (trimmed)
+	identifier = strings.TrimSpace(message[idx+len(separator):])
+
+	// Validate identifier (should be a single word/token, not multiple lines)
+	if strings.Contains(identifier, "\n") || len(identifier) > 50 {
+		// If identifier contains newlines or is too long, it's probably not an identifier
+		// Return the full message instead
+		return "", message
+	}
 
 	return identifier, content
 }

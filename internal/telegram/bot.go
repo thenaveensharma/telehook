@@ -143,7 +143,8 @@ func (b *Bot) SendMessage(text string) (string, error) {
 	}
 
 	msg := tgbotapi.NewMessageToChannel(b.channelID, text)
-	msg.ParseMode = "HTML"
+	msg.ParseMode = "Markdown"
+	msg.DisableWebPagePreview = true
 
 	sentMsg, err := b.api.Send(msg)
 	if err != nil {
@@ -161,26 +162,11 @@ func (b *Bot) SendMessage(text string) (string, error) {
 }
 
 func (b *Bot) SendFormattedWebhookMessage(username string, payload map[string]interface{}) (string, error) {
+	// Just send the message as-is, nothing extra
 	message := ""
 
-	// Check if there's a custom message field
 	if msg, ok := payload["message"].(string); ok && msg != "" {
-		message = fmt.Sprintf("%s\n\n", msg)
-	}
-
-	// Add data if present
-	if data, ok := payload["data"].(map[string]interface{}); ok && len(data) > 0 {
-		dataJSON, err := json.MarshalIndent(data, "", "  ")
-		if err == nil {
-			message += fmt.Sprintf("<pre>%s</pre>", string(dataJSON))
-		}
-	} else if len(payload) > 1 || (len(payload) == 1 && payload["message"] == nil) {
-		// If there's no message or data fields, send the entire payload
-		message += "<b>Payload:</b>\n"
-		payloadJSON, err := json.MarshalIndent(payload, "", "  ")
-		if err == nil {
-			message += fmt.Sprintf("<pre>%s</pre>", string(payloadJSON))
-		}
+		message = msg
 	}
 
 	return b.SendMessage(message)

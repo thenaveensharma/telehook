@@ -526,6 +526,37 @@ func (db *DB) GetBotByID(ctx context.Context, botID int) (*models.TelegramBot, e
 	return &bot, nil
 }
 
+// GetDefaultTelegramChannel retrieves the first active channel for a user
+func (db *DB) GetDefaultTelegramChannel(ctx context.Context, userID int) (*models.TelegramChannel, error) {
+	var channel models.TelegramChannel
+	query := `
+		SELECT id, user_id, bot_id, identifier, channel_id, channel_name, description, is_active, created_at, updated_at
+		FROM telegram_channels
+		WHERE user_id = $1 AND is_active = true
+		ORDER BY created_at ASC
+		LIMIT 1
+	`
+
+	err := db.Pool.QueryRow(ctx, query, userID).Scan(
+		&channel.ID,
+		&channel.UserID,
+		&channel.BotID,
+		&channel.Identifier,
+		&channel.ChannelID,
+		&channel.ChannelName,
+		&channel.Description,
+		&channel.IsActive,
+		&channel.CreatedAt,
+		&channel.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default telegram channel: %w", err)
+	}
+
+	return &channel, nil
+}
+
 // ============================================================================
 // Analytics Queries
 // ============================================================================

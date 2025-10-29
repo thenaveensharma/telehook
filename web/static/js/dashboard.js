@@ -195,7 +195,7 @@ async function loadChannelsForTest() {
 
         const select = document.getElementById('testChannelIdentifier');
         if (select) {
-            select.innerHTML = '<option value="">-- Select a channel --</option>';
+            select.innerHTML = '<option value="">(Optional) Send to default channel</option>';
 
             if (channels.length === 0) {
                 const option = document.createElement('option');
@@ -219,17 +219,49 @@ async function loadChannelsForTest() {
     }
 }
 
+// Convert Telegram Markdown to HTML for preview
+function renderTelegramMarkdown(text) {
+    if (!text) return 'Type a message to see preview...';
+
+    // Escape HTML first
+    let html = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // Code blocks (```)
+    html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+
+    // Links [text](url)
+    html = html.replace(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+
+    // Bold *text*
+    html = html.replace(/\*([^\*]+)\*/g, '<strong>$1</strong>');
+
+    // Italic _text_
+    html = html.replace(/_([^_]+)_/g, '<em>$1</em>');
+
+    // Inline code `text`
+    html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Convert line breaks to <br>
+    html = html.replace(/\n/g, '<br>');
+
+    return html;
+}
+
 // Update message preview
 function updateMessagePreview() {
     const message = document.getElementById('testMessage').value;
     const identifier = document.getElementById('testChannelIdentifier').value;
-    const preview = document.getElementById('testMessagePreview');
+    const preview = document.getElementById('previewContent');
 
-    if (message && identifier) {
-        const formattedMessage = `${message}\n----\n${identifier}`;
-        preview.textContent = formattedMessage;
+    if (message) {
+        // Show what will actually be sent to Telegram (without identifier)
+        const cleanMessage = message;
+        preview.innerHTML = renderTelegramMarkdown(cleanMessage);
     } else {
-        preview.textContent = '';
+        preview.innerHTML = 'Type a message to see preview...';
     }
 }
 
@@ -262,38 +294,18 @@ if (testWebhookForm) {
         const message = document.getElementById('testMessage').value;
         const identifier = document.getElementById('testChannelIdentifier').value;
         const priority = parseInt(document.getElementById('testPriority').value);
-        const dataStr = document.getElementById('testData').value;
         const errorMessage = document.getElementById('testErrorMessage');
         const successMessage = document.getElementById('testSuccessMessage');
 
         errorMessage.style.display = 'none';
         successMessage.style.display = 'none';
 
-        // Validate channel identifier
-        if (!identifier) {
-            errorMessage.textContent = 'Please select a channel identifier';
-            errorMessage.style.display = 'block';
-            return;
-        }
-
-        let data = {};
-        try {
-            if (dataStr.trim()) {
-                data = JSON.parse(dataStr);
-            }
-        } catch (e) {
-            errorMessage.textContent = 'Invalid JSON in additional data';
-            errorMessage.style.display = 'block';
-            return;
-        }
-
-        // Format message with identifier
-        const formattedMessage = `${message}\n----\n${identifier}`;
+        // Format message with identifier (only if provided)
+        const formattedMessage = identifier ? `${message}\n----\n${identifier}` : message;
 
         const payload = {
             message: formattedMessage,
-            priority: priority,
-            data: data
+            priority: priority
         };
 
         try {
@@ -309,13 +321,10 @@ if (testWebhookForm) {
             const result = await response.json();
 
             if (response.ok) {
-                const channelName = result.channel || identifier;
-                successMessage.textContent = `✅ Message sent successfully to "${channelName}"! Check your Telegram channel.`;
+                const channelName = result.channel || 'your channel';
+                const identifierMsg = identifier ? ` (identifier: ${result.identifier || identifier})` : ' (default channel)';
+                successMessage.textContent = `✅ Message sent successfully to "${channelName}"${identifierMsg}! Check your Telegram channel.`;
                 successMessage.style.display = 'block';
-
-                // Clear form
-                document.getElementById('testMessage').value = '';
-                updateMessagePreview();
 
                 // Reload webhook info to show new log
                 setTimeout(() => {
@@ -323,6 +332,9 @@ if (testWebhookForm) {
                 }, 1000);
             } else {
                 errorMessage.textContent = result.error || 'Failed to send message';
+                if (result.hint) {
+                    errorMessage.textContent += ` - ${result.hint}`;
+                }
                 errorMessage.style.display = 'block';
             }
         } catch (error) {

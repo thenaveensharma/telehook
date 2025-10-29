@@ -1,18 +1,32 @@
 // ============================================================================
-// Tab Management
+// Navigation Management
 // ============================================================================
 
-document.querySelectorAll('.tab-btn').forEach(button => {
+const pageTitles = {
+    'webhook': 'Webhook',
+    'bots': 'Telegram Bots',
+    'channels': 'Channels',
+    'activity': 'Activity',
+    'analytics': 'Analytics'
+};
+
+document.querySelectorAll('.nav-item').forEach(button => {
     button.addEventListener('click', () => {
         const tabName = button.getAttribute('data-tab');
 
-        // Remove active class from all tabs and buttons
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        // Remove active class from all nav items and content
+        document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
         // Add active class to clicked button and corresponding content
         button.classList.add('active');
         document.getElementById(`${tabName}-tab`).classList.add('active');
+
+        // Update page title
+        const pageTitle = document.getElementById('pageTitle');
+        if (pageTitle) {
+            pageTitle.textContent = pageTitles[tabName] || 'Dashboard';
+        }
 
         // Load data for the tab
         if (tabName === 'bots') {
@@ -23,13 +37,8 @@ document.querySelectorAll('.tab-btn').forEach(button => {
             loadWebhookInfo(); // Reload activity logs
         } else if (tabName === 'analytics') {
             // Load analytics (defined in analytics.js)
-            console.log('Analytics tab clicked');
-            console.log('window.loadAnalytics function exists?', typeof window.loadAnalytics);
             if (typeof window.loadAnalytics === 'function') {
-                console.log('Calling window.loadAnalytics...');
                 window.loadAnalytics('24h');
-            } else {
-                console.error('window.loadAnalytics function not found!');
             }
         }
     });

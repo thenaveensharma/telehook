@@ -7,26 +7,51 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1><a href="/">📱 TeleHook</a></h1>
-            <div class="header-actions">
-                <span id="usernameDisplay" class="username"></span>
-                <button id="logoutBtn" class="btn btn-small">Logout</button>
+    <div class="dashboard-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1><a href="/">📱 TeleHook</a></h1>
             </div>
-        </header>
 
-        <main class="dashboard">
-            <h2>Your Webhook Dashboard</h2>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-tab="webhook">
+                    <span class="nav-icon">🔗</span>
+                    <span class="nav-text">Webhook</span>
+                </button>
+                <button class="nav-item" data-tab="bots">
+                    <span class="nav-icon">🤖</span>
+                    <span class="nav-text">Bots</span>
+                </button>
+                <button class="nav-item" data-tab="channels">
+                    <span class="nav-icon">📢</span>
+                    <span class="nav-text">Channels</span>
+                </button>
+                <button class="nav-item" data-tab="activity">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Activity</span>
+                </button>
+                <button class="nav-item" data-tab="analytics">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-text">Analytics</span>
+                </button>
+            </nav>
 
-            <!-- Tab Navigation -->
-            <div class="tabs">
-                <button class="tab-btn active" data-tab="webhook">Webhook</button>
-                <button class="tab-btn" data-tab="bots">Telegram Bots</button>
-                <button class="tab-btn" data-tab="channels">Channels</button>
-                <button class="tab-btn" data-tab="activity">Activity</button>
-                <button class="tab-btn" data-tab="analytics">Analytics</button>
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <span id="usernameDisplay" class="username"></span>
+                </div>
+                <button id="logoutBtn" class="btn btn-small btn-full">Logout</button>
             </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="content-header">
+                <h2 id="pageTitle">Webhook</h2>
+            </header>
+
+            <div class="content-body">
 
             <!-- Webhook Tab -->
             <div id="webhook-tab" class="tab-content active">
@@ -52,16 +77,16 @@
                 <h3>🧪 Test Your Webhook</h3>
                 <form id="testWebhookForm" class="test-form">
                     <div class="form-group">
-                        <label for="testChannelIdentifier">Channel Identifier *</label>
-                        <select id="testChannelIdentifier" required>
+                        <label for="testChannelIdentifier">Channel Identifier (Optional)</label>
+                        <select id="testChannelIdentifier">
                             <option value="">-- Select a channel --</option>
                         </select>
-                        <small>Select which channel to send this test message to</small>
+                        <small>Select a specific channel or leave empty for default channel</small>
                     </div>
                     <div class="form-group">
                         <label for="testMessage">Message *</label>
                         <textarea id="testMessage" rows="3" placeholder="Test message from dashboard" required></textarea>
-                        <small>Your message content (identifier will be added automatically)</small>
+                        <small>Your message content (identifier added automatically if selected)</small>
                     </div>
                     <div class="form-group">
                         <label for="testPriority">Priority</label>
@@ -73,15 +98,14 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="testData">Additional Data (JSON)</label>
-                        <textarea id="testData" rows="4" placeholder='{"key": "value"}'>{
-  "source": "dashboard",
-  "timestamp": "2025-10-25T12:00:00Z"
-}</textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>📝 Preview (will be sent to webhook)</label>
-                        <pre id="testMessagePreview" class="message-preview"></pre>
+                        <label>📱 Telegram Preview</label>
+                        <div id="telegramPreview" class="telegram-preview">
+                            <div class="telegram-message">
+                                <div id="previewContent" class="telegram-content">
+                                    Type a message to see preview...
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div id="testErrorMessage" class="error-message" style="display: none;"></div>
                     <div id="testSuccessMessage" class="success-message" style="display: none;"></div>
@@ -91,24 +115,29 @@
             </div>
 
             <div class="card">
-                <h3>💡 Usage Example</h3>
+                <h3>💡 Usage Examples</h3>
                 <div class="code-example">
-                    <p><strong>Multi-Channel Format:</strong> Messages must include channel identifier after <code>----</code></p>
+                    <p><strong>Option 1: Simple Mode (Default Channel)</strong></p>
                     <pre><code>curl -X POST <span id="exampleUrl"></span> \
   -H "Content-Type: application/json" \
-  -d '{
-    "message": "Hello from my app!\n----\ntg",
-    "priority": 3,
-    "data": {
-      "user_id": 123,
-      "action": "signup"
-    }
-  }'</code></pre>
-                    <p><strong>Message Format:</strong></p>
+  -d '{"message": "Hello from my app!"}'</code></pre>
+
+                    <p><strong>Option 2: With Channel Identifier (Specific Channel)</strong></p>
+                    <pre><code>curl -X POST <span id="exampleUrl"></span> \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Hello from my app!\n----\ntg"}'</code></pre>
+
+                    <p><strong>Message Format with Identifier:</strong></p>
                     <pre><code>&lt;your message content&gt;
 ----
 &lt;channel_identifier&gt;</code></pre>
-                    <p><small>💡 Tip: Configure your channels in the "Channels" tab to set up identifiers like "tg", "alerts", "vip", etc.</small></p>
+                    <p><small>💡 Tip: The identifier is used for routing only and won't appear in the Telegram message. Configure identifiers in the "Channels" tab (e.g., "tg", "alerts", "screener").</small></p>
+
+                    <p><strong>Markdown Formatting:</strong></p>
+                    <pre><code>*bold text* _italic_ `code` [link](url)
+```
+code block
+```</code></pre>
                 </div>
             </div>
             </div>
@@ -313,12 +342,9 @@
                     </div>
                 </div>
             </div>
+            </div><!-- content-body -->
         </main>
-
-        <footer>
-            <p>&copy; 2025 TeleHook</p>
-        </footer>
-    </div>
+    </div><!-- dashboard-layout -->
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="/static/js/dashboard.js?v=2"></script>
